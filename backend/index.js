@@ -4,6 +4,9 @@ const express = require('express');
 const app = express();
 const port = 5000;
 
+app.use(express.json());
+app.use('/api/auth', require('./routes/auth'));
+
 // Connect to MongoDB
 connectToMongo().then(() => {
     app.listen(port, () => {
@@ -15,4 +18,5 @@ connectToMongo().then(() => {
 
 app.get('/', (req, res) => {
     res.send("Hello World");
+
 });
