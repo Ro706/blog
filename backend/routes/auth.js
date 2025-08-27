@@ -1,23 +1,40 @@
 const express = require('express');
-const User = require('../models/User');
-const {body,ValidationResult}= require('express-validator');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
+const User = require('../models/User');
 
-// create a user using :POST "/api/auth"
-router.post('/',[
+// POST /api/auth
+router.post(
+  '/',
+  [
     body('name').isString().withMessage('Name must be a string'),
     body('email').isEmail().withMessage('Invalid email address'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
-], (req, res) => {
-    const errors = ValidationResult(req);
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  ],
+  async (req, res) => {
+    // Check for validation errors
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const user = new User(req.body);
-    user.save()
-        .then(() => res.status(201).json({ message: 'User created successfully' }))
-        .catch((err) => res.status(500).json({ error: err.message }));
-});
+    try {
+      const user = new User(req.body);
+      await user.save();
+
+      // Send response without the "user" wrapper
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phonenumber: user.phonenumber,
+        date: user.date,
+      });
+      console.log('User created:', user);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 module.exports = router;
