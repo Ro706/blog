@@ -1,20 +1,20 @@
 const connectToMongo = require('./db');
 const express = require('express');
-
+connectToMongo();
 const app = express();
 const port = 5000;
 
+// Middleware
 app.use(express.json());
+
+// define routes
 app.use('/api/auth', require('./routes/auth'));
+// app.use('/api/blog', require('./routes/blog'));
 
 // Connect to MongoDB
-connectToMongo().then(() => {
-    app.listen(port, () => {
-        console.log(`Server is running on http://localhost:${port}`);
-    });
-}).catch((err) => {
-    console.error('Failed to connect to MongoDB:', err);
-});
+app.listen(port,()=>{
+    console.log(`Server is running on http://localhost:${port}`);
+})
 
 app.get('/', (req, res) => {
     res.send("Hello World");
