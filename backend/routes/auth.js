@@ -19,18 +19,16 @@ router.post(
     }
 
     try {
-      const user = new User(req.body);
-      await user.save();
-
-      // Send response without the "user" wrapper
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phonenumber: user.phonenumber,
-        date: user.date,
+      const existingUser = await User.findOne({ email: req.body.email });
+      if (existingUser){
+        return res.status(400).json({ error: 'User already exists' });
+      }
+      const user = await User.create({
+        name: req.body.name,
+        email: req.body.email,
+        password: req.body.password,
       });
-      console.log('User created:', user);
+      res.status(201).json({ user });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
