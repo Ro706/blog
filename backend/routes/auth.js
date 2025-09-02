@@ -8,7 +8,7 @@ const User = require('../models/User');
 
 // POST /api/auth
 router.post(
-  '/',
+  '/signup',
   [
     body('name').isString().withMessage('Name must be a string'),
     body('email').isEmail().withMessage('Invalid email address'),
