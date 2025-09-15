@@ -1,8 +1,10 @@
+const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Blog = require('../models/Blog');
 const fetchuser = require('../middleware/fetchuser');
+
 
 // --- CLOUD STORAGE SETUP ---
 const multer = require('multer');
@@ -114,6 +116,47 @@ router.delete('/deleteblog/:id', fetchuser, async (req, res) => {
         // Improvement Opportunity: Delete associated image from GCS bucket here
         await Blog.findByIdAndDelete(req.params.id);
         res.json({ success: "Blog post has been deleted", blog });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+// ## Route 5: GET /blog/:id
+// ## Fetch a single blog post
+router.get('/blog/:id', async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+
+        if (!blog) {
+            return res.status(404).send("Not Found");
+        }
+
+        if (blog.pubpriv === 'public') {
+            return res.json(blog);
+        }
+
+        // If the blog is private, check for authentication
+        const authHeader = req.header('Authorization');
+        const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
+
+        if (!token) {
+            return res.status(401).send({ error: "Access denied. No token provided." });
+        }
+
+        try {
+            const data = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = data.user;
+
+            // Check if the logged-in user is the owner of the blog
+            if (blog.user.toString() !== req.user.id) {
+                return res.status(401).send({ error: "Not Allowed" });
+            }
+
+            return res.json(blog);
+        } catch (error) {
+            res.status(401).send({ error: "Access denied. Invalid token." });
+        }
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Internal Server Error");
