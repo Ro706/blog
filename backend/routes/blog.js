@@ -132,7 +132,7 @@ router.get('/blog/:id', async (req, res) => {
             return res.status(404).send("Not Found");
         }
 
-        if (blog.pubpriv === 'public') {
+        if (blog.blogstatus === 'public') {
             return res.json(blog);
         }
 

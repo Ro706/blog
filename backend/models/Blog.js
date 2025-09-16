@@ -7,7 +7,7 @@ const BlogSchema = new Schema({
         ref: 'user',
         required: true
     },
-    pubpriv:{
+    blogstatus:{
         type: String,
         required: true,
     },
