@@ -22,6 +22,9 @@ This is a full-stack blog application with a React frontend and a Node.js backen
 *   **File Storage:** Google Cloud Storage
 ## Getting Started
 
+
+<img src="./src/assets/R_blog_site_logo.png">
+
 ### Prerequisites
 
 *   Node.js
