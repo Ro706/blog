@@ -1,12 +1,109 @@
-# React + Vite
+# R Blog Site
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a full-stack blog application with a React frontend and a Node.js backend.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Frontend
 
-## Expanding the ESLint configuration
+*   **Framework:** React
+*   **Build Tool:** Vite
+*   **Styling:** Tailwind CSS
+*   **Dependencies:**
+    *   `react`
+    *   `react-dom`
+    *   `tailwindcss`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Backend
+
+*   **Framework:** Node.js with Express
+*   **Database:** MongoDB with Mongoose
+*   **Authentication:** JSON Web Tokens (JWT)
+*   **File Storage:** Google Cloud Storage
+## Getting Started
+
+### Prerequisites
+
+*   Node.js
+*   npm
+*   Docker (optional)
+
+### Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Ro706/blog.git
+    ```
+2.  **Install frontend dependencies:**
+    ```bash
+    cd blog
+    npm install
+    ```
+3.  **Install backend dependencies:**
+    ```bash
+    cd backend
+    npm install
+    ```
+
+## Build and Run
+
+### Frontend
+
+To run the frontend in development mode:
+
+```bash
+npm run dev
+```
+
+To build the frontend for production:
+
+```bash
+npm run build
+```
+
+To preview the production build:
+
+```bash
+npm run preview
+```
+
+### Backend
+
+To run the backend server:
+
+```bash
+cd backend
+docker compose -f docker.yaml up -d
+nodemon
+```
+
+## Docker
+
+This project is containerized with Docker.
+
+### Frontend
+
+To build and run the frontend container:
+
+```bash
+docker build -t blog-frontend .
+docker run -p 3000:3000 blog-frontend
+```
+
+### Backend
+
+To build and run the backend container:
+
+```bash
+cd backend
+docker build -t blog-backend .
+docker run -p 5000:5000 blog-backend
+```
+
+### Docker Compose
+
+The `compose.yaml` file can be used to run the frontend service.
+
+```bash
+docker-compose up
+```
