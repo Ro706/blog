@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Blog = require('../models/Blog');
-const fetchuser = require('../middleware/fetchuser');
+const fetchuser = require('../middleware/fetchalluser');
 
 
 // --- CLOUD STORAGE SETUP ---
