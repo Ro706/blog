@@ -23,12 +23,25 @@ const storage = new Storage({
 });
 const bucket = storage.bucket(process.env.GCP_BUCKET_NAME);
 // --- END OF CLOUD SETUP ---
+const Comment = require('../models/Comment');
 
 // ## Route 1: GET /fetchallblogs
 // ## Fetch all blog posts for the authenticated user
 router.get('/fetchallblogs', fetchuser, async (req, res) => {
     try {
         const blogs = await Blog.find({ user: req.user.id }).sort({ createdAt: -1 });
+        res.json(blogs);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+// ## Route 1.1: GET /public-blogs
+// ## Fetch all public blog posts
+router.get('/public-blogs', async (req, res) => {
+    try {
+        const blogs = await Blog.find({ blogstatus: 'public' }).sort({ createdAt: -1 });
         res.json(blogs);
     } catch (error) {
         console.error(error.message);
@@ -44,7 +57,7 @@ router.post(
     upload.single('image'), // Multer middleware for file handling
     [
         body('title', 'Enter a valid title').isLength({ min: 3 }),
-        body('content', 'Content must be at least 5 characters').isLength({ min: 5 }),
+        body('description', 'Description must be at least 5 characters').isLength({ min: 5 }),
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -53,7 +66,8 @@ router.post(
         }
 
         try {
-            const { title, content, tags } = req.body;
+            const { title, description, tag, blogstatus } = req.body; // Changed content to description and added blogstatus
+            const tagsArray = typeof tag === 'string' ? tag.split(',').map(t => t.trim()) : tag;
             
             if (req.file) { // If an image is uploaded
                 const blob = bucket.file(Date.now() + path.extname(req.file.originalname));
@@ -62,15 +76,20 @@ router.post(
                 blobStream.on('error', (err) => res.status(500).send({ message: err.message }));
 
                 blobStream.on('finish', async () => {
-                    const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-                    const blog = new Blog({ title, content, tags, imageUrl, user: req.user.id });
-                    const savedBlog = await blog.save();
-                    res.status(201).json(savedBlog);
+                    try {
+                        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+                        const blog = new Blog({ title, description, tag: tagsArray, imageUrl, user: req.user.id, blogstatus });
+                        const savedBlog = await blog.save();
+                        res.status(201).json(savedBlog);
+                    } catch (error) {
+                        console.error('Error saving blog to database:', error);
+                        res.status(500).send({ message: "Error saving blog data." });
+                    }
                 });
 
                 blobStream.end(req.file.buffer);
             } else { // If no image is uploaded
-                const blog = new Blog({ title, content, tags, user: req.user.id });
+                const blog = new Blog({ title, description, tag: tagsArray, user: req.user.id, blogstatus }); // Added blogstatus
                 const savedBlog = await blog.save();
                 res.status(201).json(savedBlog);
             }
@@ -85,12 +104,12 @@ router.post(
 // ## Update an existing blog post for the authenticated user
 router.put('/updateblog/:id', fetchuser, async (req, res) => {
     try {
-        const { title, content, tags, imageUrl } = req.body;
+        const { title, description, tag, imageUrl } = req.body;
 
         const newBlog = {};
         if (title) newBlog.title = title;
-        if (content) newBlog.content = content;
-        if (tags) newBlog.tags = tags;
+        if (description) newBlog.description = description;
+        if (tag) newBlog.tag = tag;
         if (imageUrl !== undefined) newBlog.imageUrl = imageUrl;
 
         let blog = await Blog.findById(req.params.id);
@@ -132,6 +151,10 @@ router.get('/blog/:id', async (req, res) => {
             return res.status(404).send("Not Found");
         }
 
+        // Increment view count
+        blog.views += 1;
+        await blog.save();
+
         if (blog.blogstatus === 'public') {
             return res.json(blog);
         }
@@ -157,6 +180,76 @@ router.get('/blog/:id', async (req, res) => {
         } catch (error) {
             res.status(401).send({ error: "Access denied. Invalid token." });
         }
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+// ## Route 6: PUT /:id/like
+// ## Like or unlike a blog post
+router.put('/:id/like', fetchuser, async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+        if (!blog) {
+            return res.status(404).send("Not Found");
+        }
+
+        const isLiked = blog.likes.includes(req.user.id);
+
+        if (isLiked) {
+            // Unlike the post
+            blog.likes.pull(req.user.id);
+        } else {
+            // Like the post
+            blog.likes.push(req.user.id);
+        }
+
+        await blog.save();
+        res.json(blog);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+// ## Route 7: GET /:id/comments
+// ## Fetch all comments for a blog post
+router.get('/:id/comments', async (req, res) => {
+    try {
+        const comments = await Comment.find({ blog: req.params.id }).populate('user', 'name').sort({ createdAt: -1 });
+        res.json(comments);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+// ## Route 8: POST /:id/comments
+// ## Add a comment to a blog post
+router.post('/:id/comments', fetchuser, [
+    body('text', 'Comment text cannot be empty').notEmpty(),
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+        const { text } = req.body;
+        const blog = await Blog.findById(req.params.id);
+        if (!blog) {
+            return res.status(404).send("Not Found");
+        }
+
+        const comment = new Comment({
+            text,
+            blog: req.params.id,
+            user: req.user.id,
+        });
+
+        const savedComment = await comment.save();
+        res.status(201).json(savedComment);
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Internal Server Error");

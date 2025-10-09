@@ -31,6 +31,14 @@ const BlogSchema = new Schema({
         type: Date,
         default: Date.now
     },
+    views: {
+        type: Number,
+        default: 0
+    },
+    likes: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user'
+    }]
 });
 
 module.exports = mongoose.model('blog', BlogSchema);

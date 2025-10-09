@@ -6,6 +6,8 @@ import { Routes, Route } from 'react-router-dom';
   import SignupPage from './components/SignupPage';
   import CreateBlogPage from './components/CreateBlogPage';
   import ProtectedRoute from './components/ProtectedRoute';
+  import BlogPage from './components/BlogPage.jsx';
+  import Dashboard from './components/Dashboard.jsx';
 
   function App() {
     return (
@@ -17,10 +19,11 @@ import { Routes, Route } from 'react-router-dom';
           <Route path="/About" element={<AboutPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/blog/:id" element={<BlogPage />} />
           <Route path="/create-blog" element={<ProtectedRoute><CreateBlogPage /></ProtectedRoute>} />
           <Route path ="*" element={<h1 className="text-4xl font-bold">404 Not Found</h1>} />
           <Route path = "/Account" element={<h1 className="text-4xl font-bold">Account Page</h1>} />
-          <Route path = "/Dashboard" element={<ProtectedRoute><h1 className="text-4xl font-bold">Dashboard Page</h1></ProtectedRoute>} />
+          <Route path = "/Dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         </Routes>
       </div>
     );
