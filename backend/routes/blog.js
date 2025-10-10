@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Blog = require('../models/Blog');
+const User = require('../models/User');
 const fetchuser = require('../middleware/fetchalluser');
 
 
@@ -29,7 +30,7 @@ const Comment = require('../models/Comment');
 // ## Fetch all blog posts for the authenticated user
 router.get('/fetchallblogs', fetchuser, async (req, res) => {
     try {
-        const blogs = await Blog.find({ user: req.user.id }).sort({ createdAt: -1 });
+        const blogs = await Blog.find({ user: req.user.id }).sort({ date: -1 });
         res.json(blogs);
     } catch (error) {
         console.error(error.message);
@@ -41,10 +42,30 @@ router.get('/fetchallblogs', fetchuser, async (req, res) => {
 // ## Fetch all public blog posts
 router.get('/public-blogs', async (req, res) => {
     try {
-        const blogs = await Blog.find({ blogstatus: 'public' }).sort({ createdAt: -1 });
-        res.json(blogs);
+        const blogs = await Blog.find({ blogstatus: 'public' })
+            .populate('user', 'name') // Populate user's name
+            .sort({ date: -1 });
+
+        // Add a placeholder for author profile picture
+        const blogsWithAuthor = blogs.map(blog => {
+            const blogObject = blog.toObject();
+            if (blog.user) {
+                blogObject.author = {
+                    name: blog.user.name,
+                    profilePicture: `https://i.pravatar.cc/150?u=${blog.user._id}`
+                };
+            } else {
+                blogObject.author = {
+                    name: 'Unknown Author',
+                    profilePicture: 'https://i.pravatar.cc/150'
+                };
+            }
+            return blogObject;
+        });
+
+        res.json(blogsWithAuthor);
     } catch (error) {
-        console.error(error.message);
+        console.error(error);
         res.status(500).send("Internal Server Error");
     }
 });
@@ -145,15 +166,11 @@ router.delete('/deleteblog/:id', fetchuser, async (req, res) => {
 // ## Fetch a single blog post
 router.get('/blog/:id', async (req, res) => {
     try {
-        const blog = await Blog.findById(req.params.id);
+        const blog = await Blog.findById(req.params.id).populate('user', 'name');
 
         if (!blog) {
             return res.status(404).send("Not Found");
         }
-
-        // Increment view count
-        blog.views += 1;
-        await blog.save();
 
         if (blog.blogstatus === 'public') {
             return res.json(blog);
@@ -185,6 +202,23 @@ router.get('/blog/:id', async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 });
+
+// ## Route to increment view count
+router.post('/blog/:id/view', async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+        if (!blog) {
+            return res.status(404).send("Not Found");
+        }
+        blog.views += 1;
+        await blog.save();
+        res.status(200).json({ success: true, views: blog.views });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
 
 // ## Route 6: PUT /:id/like
 // ## Like or unlike a blog post

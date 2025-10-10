@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const BlogSchema = new Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'user',
+        ref: 'User',
         required: true
     },
     blogstatus:{
@@ -37,7 +37,7 @@ const BlogSchema = new Schema({
     },
     likes: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'user'
+        ref: 'User'
     }]
 });
 
