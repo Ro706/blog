@@ -38,6 +38,24 @@ router.get('/fetchallblogs', fetchuser, async (req, res) => {
     }
 });
 
+router.get('/recentcomments', fetchuser, async (req, res) => {
+    try {
+        const blogs = await Blog.find({ user: req.user.id });
+        const blogIds = blogs.map(blog => blog._id);
+
+        const comments = await Comment.find({ blog: { $in: blogIds } })
+            .populate('user', 'name')
+            .populate('blog', 'title')
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+        res.json(comments);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
 // ## Route 1.1: GET /public-blogs
 // ## Fetch all public blog posts
 router.get('/public-blogs', async (req, res) => {
@@ -310,13 +328,19 @@ router.get('/blog/:id', async (req, res) => {
 });
 
 // ## Route to increment view count
-router.post('/blog/:id/view', async (req, res) => {
+router.post('/blog/:id/view', fetchuser, async (req, res) => {
     try {
         const blog = await Blog.findById(req.params.id);
         if (!blog) {
             return res.status(404).send("Not Found");
         }
+
+        if (blog.viewedBy.includes(req.user.id)) {
+            return res.status(200).json({ success: true, views: blog.views });
+        }
+
         blog.views += 1;
+        blog.viewedBy.push(req.user.id);
         await blog.save();
         res.status(200).json({ success: true, views: blog.views });
     } catch (error) {
@@ -389,7 +413,8 @@ router.post('/:id/comments', fetchuser, [
         });
 
         const savedComment = await comment.save();
-        res.status(201).json(savedComment);
+        const populatedComment = await savedComment.populate('user', 'name');
+        res.status(201).json(populatedComment);
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Internal Server Error");

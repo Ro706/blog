@@ -18,7 +18,32 @@ function AboutPage() {
 
         <div className="space-y-12">
           <section>
-            <h2 className="text-3xl font-bold text-center mb-8">Core Technology Stack</h2>
+            <h2 className="text-3xl font-bold text-center mb-8">Project Overview</h2>
+            <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 border border-gray-200">
+              <p className="text-lg text-gray-700">
+                This project is a full-featured blogging platform that allows users to create, edit, and share their thoughts with the world. It is built with a modern technology stack and features a clean, professional user interface.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-3xl font-bold text-center mb-8">Key Features</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <TechCard title="User Authentication">
+                <p>Secure user authentication is handled using <strong>JSON Web Tokens (JWT)</strong>. When a user logs in, the server generates a token that is stored on the client. This token is sent with subsequent requests to authorize access to protected routes and actions.</p>
+              </TechCard>
+              <TechCard title="Blog Management">
+                <p>Users can create, edit, and delete their own blog posts. They can also set the status of their blogs to public or private. The platform supports a rich content editor that allows users to add subtitles and multiple images to their posts.</p>
+              </TechCard>
+              <TechCard title="Image & Media Handling">
+                <p>Image uploads are managed through a robust cloud-based solution. The backend uses <strong>Multer</strong> to handle `multipart/form-data` from the client.</p>
+                <p>Instead of storing images on the local server, they are streamed directly to <strong>Google Cloud Storage (GCS)</strong>. This approach is highly scalable, secure, and reduces the load on our application server, ensuring faster media processing and delivery.</p>
+              </TechCard>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-3xl font-bold text-center mb-8">Technology Stack</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               <TechCard title="Frontend">
                 <p><strong>React:</strong> A declarative, component-based library for building dynamic user interfaces.</p>
@@ -39,37 +64,19 @@ function AboutPage() {
           </section>
 
           <section>
-            <h2 className="text-3xl font-bold text-center mb-8">Key Features & Implementation</h2>
-            <div className="space-y-8">
-              <TechCard title="User Authentication">
-                <p>Secure user authentication is handled using <strong>JSON Web Tokens (JWT)</strong>. When a user logs in, the server generates a token that is stored on the client. This token is sent with subsequent requests to authorize access to protected routes and actions.</p>
-              </TechCard>
-              <TechCard title="Image & Media Handling">
-                <p>Image uploads are managed through a robust cloud-based solution. The backend uses <strong>Multer</strong> to handle `multipart/form-data` from the client.</p>
-                <p>Instead of storing images on the local server, they are streamed directly to <strong>Google Cloud Storage (GCS)</strong>. This approach is highly scalable, secure, and reduces the load on our application server, ensuring faster media processing and delivery.</p>
-              </TechCard>
-              <TechCard title="Container Orchestration">
-                <p>The entire application is orchestrated using <strong>Docker Compose</strong> (`compose.yaml`). This tool simplifies the management of our multi-container setup, allowing us to define and run the frontend, backend, and any other required services with a single command. It streamlines the development workflow and makes deployment more predictable.</p>
-              </TechCard>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-3xl font-bold text-center mb-8">Development Process</h2>
+            <h2 className="text-3xl font-bold text-center mb-8">Privacy and Security</h2>
             <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 border border-gray-200">
               <p className="text-lg text-gray-700">
-                This platform was built and refined with the assistance of a powerful AI tool. The process involved iterative development, from scaffolding the initial MERN stack application to implementing a complete visual and functional redesign. The AI assistant played a key role in:
+                We take your privacy and security seriously. Here are some of the measures we have in place:
               </p>
               <ul className="mt-4 list-disc list-inside space-y-2 text-gray-600">
-                <li>Analyzing the existing codebase to understand its structure and conventions.</li>
-                <li>Writing and refactoring code for both the frontend (React) and backend (Node.js).</li>
-                <li>Implementing the modern, professional user interface you see today, including the responsive design and hover effects.</li>
-                <li>Debugging complex issues, such as the `MissingSchemaError` in Mongoose, by analyzing server logs and correcting schema references.</li>
-                <li>Generating documentation, including this very page, to provide clear insights into the project's inner workings.</li>
+                <li><strong>Password Hashing:</strong> User passwords are not stored in plain text. We use the <strong>bcrypt.js</strong> library to hash and salt passwords before storing them in the database.</li>
+                <li><strong>JWT Authentication:</strong> We use JSON Web Tokens (JWT) for authentication. This means that we do not store session information on the server, which makes our application more scalable and secure.</li>
+                <li><strong>Secure Image Uploads:</strong> Images are uploaded directly to Google Cloud Storage (GCS) and are not stored on our application server. This reduces the attack surface of our application and ensures that your images are stored securely.</li>
+                <li><strong>Private Blogs:</strong> You have the option to make your blogs private, so that only you can view them.</li>
               </ul>
             </div>
           </section>
-
         </div>
       </div>
     </div>

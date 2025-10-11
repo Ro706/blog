@@ -9,9 +9,24 @@ const Dashboard = () => {
   const [totalLikes, setTotalLikes] = useState(0);
   const [totalViews, setTotalViews] = useState(0);
 
+  const [recentComments, setRecentComments] = useState([]);
+
   useEffect(() => {
     fetchBlogs();
+    fetchRecentComments();
   }, []);
+
+  const fetchRecentComments = async () => {
+    const response = await fetch('http://localhost:5000/api/blog/recentcomments', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    const json = await response.json();
+    setRecentComments(json);
+  };
 
   const fetchBlogs = async () => {
     const response = await fetch('http://localhost:5000/api/blog/fetchallblogs', {
@@ -122,48 +137,20 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-md border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-700 p-6">Your Blog Posts</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {blogs.map((blog) => (
-                  <tr key={blog._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{blog.title}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${blog.blogstatus === 'public' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {blog.blogstatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(blog.date).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-4">
-                        <button onClick={() => handleToggleStatus(blog._id, blog.blogstatus)} className="text-gray-600 hover:text-gray-900 flex items-center gap-1">
-                          Toggle Status
-                        </button>
-                        <Link to={`/edit-blog/${blog._id}`} className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1">
-                          <Edit size={16} /> Edit
-                        </Link>
-                        <button onClick={() => handleDelete(blog._id)} className="text-red-600 hover:text-red-900 flex items-center gap-1">
-                          <Trash2 size={16} /> Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h2 className="text-2xl font-bold text-gray-700 p-6">Recent Comments</h2>
+          <div className="divide-y divide-gray-200">
+            {recentComments.map(comment => (
+              <div key={comment._id} className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold text-gray-800">{comment.user.name}</div>
+                  <div className="text-xs text-gray-500">on <Link to={`/blog/${comment.blog._id}`} className="font-medium text-blue-600 hover:underline">{comment.blog.title}</Link></div>
+                </div>
+                <p className="text-gray-600 mt-2">{comment.text}</p>
+                <div className="mt-4 flex justify-end">
+                  <button className="text-sm font-medium text-blue-600 hover:underline">Quick Reply</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -40,6 +40,9 @@ const BlogPage = () => {
         try {
           await fetch(`http://localhost:5000/api/blog/blog/${id}/view`, {
             method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
           });
         } catch (error) {
           console.error("Failed to increment view count:", error);
@@ -111,7 +114,7 @@ const BlogPage = () => {
                 case 'text':
                   return <p key={index}>{block.value}</p>;
                 case 'subtitle':
-                  return <h2 key={index}>{block.value}</h2>;
+                  return <h2 key={index} className="font-bold">{block.value}</h2>;
                 default:
                   return null;
               }
