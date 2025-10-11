@@ -15,17 +15,26 @@ const BlogSchema = new Schema({
         type: String,
         required: true
     },
-    description: {
+    titleImageUrl: {
         type: String,
-        required: true
+        required: false
     },
+    content: [
+        {
+            type: {
+                type: String,
+                enum: ['text', 'subtitle', 'image'],
+                required: true
+            },
+            value: {
+                type: String,
+                required: true
+            }
+        }
+    ],
     tag: {
         type: [String],
         default: ["General"] //this is for multiple tags
-    },
-    imageUrl: {
-        type: String,
-        required: false 
     },
     date: {
         type: Date,

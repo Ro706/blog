@@ -75,10 +75,10 @@ router.get('/public-blogs', async (req, res) => {
 router.post(
     '/addblog',
     fetchuser,
-    upload.single('image'), // Multer middleware for file handling
+    upload.fields([{ name: 'titleImage', maxCount: 1 }, { name: 'images' }]),
     [
         body('title', 'Enter a valid title').isLength({ min: 3 }),
-        body('description', 'Description must be at least 5 characters').isLength({ min: 5 }),
+        body('content', 'Content cannot be empty').notEmpty(),
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -87,33 +87,64 @@ router.post(
         }
 
         try {
-            const { title, description, tag, blogstatus } = req.body; // Changed content to description and added blogstatus
+            const { content, tag, blogstatus } = req.body;
+            const title = req.body.title;
             const tagsArray = typeof tag === 'string' ? tag.split(',').map(t => t.trim()) : tag;
-            
-            if (req.file) { // If an image is uploaded
-                const blob = bucket.file(Date.now() + path.extname(req.file.originalname));
+            const contentArray = JSON.parse(content);
+
+            let titleImageUrl = '';
+            if (req.files.titleImage) {
+                const titleImageFile = req.files.titleImage[0];
+                const blob = bucket.file(Date.now() + path.extname(titleImageFile.originalname));
                 const blobStream = blob.createWriteStream({ resumable: false });
 
-                blobStream.on('error', (err) => res.status(500).send({ message: err.message }));
-
-                blobStream.on('finish', async () => {
-                    try {
-                        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-                        const blog = new Blog({ title, description, tag: tagsArray, imageUrl, user: req.user.id, blogstatus });
-                        const savedBlog = await blog.save();
-                        res.status(201).json(savedBlog);
-                    } catch (error) {
-                        console.error('Error saving blog to database:', error);
-                        res.status(500).send({ message: "Error saving blog data." });
-                    }
+                await new Promise((resolve, reject) => {
+                    blobStream.on('error', (err) => reject(err));
+                    blobStream.on('finish', () => {
+                        titleImageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+                        resolve();
+                    });
+                    blobStream.end(titleImageFile.buffer);
                 });
-
-                blobStream.end(req.file.buffer);
-            } else { // If no image is uploaded
-                const blog = new Blog({ title, description, tag: tagsArray, user: req.user.id, blogstatus }); // Added blogstatus
-                const savedBlog = await blog.save();
-                res.status(201).json(savedBlog);
             }
+
+            const imageFiles = req.files.images || [];
+            let imageIndex = 0;
+
+            const processedContent = [];
+
+            for (const block of contentArray) {
+                if (block.type === 'image' && imageFiles && imageFiles[imageIndex]) {
+                    const file = imageFiles[imageIndex];
+                    const blob = bucket.file(Date.now() + path.extname(file.originalname));
+                    const blobStream = blob.createWriteStream({ resumable: false });
+
+                    await new Promise((resolve, reject) => {
+                        blobStream.on('error', (err) => reject(err));
+                        blobStream.on('finish', () => {
+                            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+                            processedContent.push({ type: 'image', value: imageUrl });
+                            imageIndex++;
+                            resolve();
+                        });
+                        blobStream.end(file.buffer);
+                    });
+                } else {
+                    processedContent.push(block);
+                }
+            }
+
+            const blog = new Blog({
+                title,
+                titleImageUrl,
+                content: processedContent,
+                tag: tagsArray,
+                user: req.user.id,
+                blogstatus,
+            });
+
+            const savedBlog = await blog.save();
+            res.status(201).json(savedBlog);
         } catch (error) {
             console.error(error.message);
             res.status(500).send("Internal Server Error");
@@ -123,21 +154,77 @@ router.post(
 
 // ## Route 3: PUT /updateblog/:id
 // ## Update an existing blog post for the authenticated user
-router.put('/updateblog/:id', fetchuser, async (req, res) => {
+router.put('/updateblog/:id', fetchuser, upload.fields([{ name: 'titleImage', maxCount: 1 }, { name: 'images' }]), async (req, res) => {
     try {
-        const { title, description, tag, imageUrl } = req.body;
+        const { title, content, tag } = req.body;
+        const contentArray = JSON.parse(content);
 
         const newBlog = {};
         if (title) newBlog.title = title;
-        if (description) newBlog.description = description;
-        if (tag) newBlog.tag = tag;
-        if (imageUrl !== undefined) newBlog.imageUrl = imageUrl;
+        if (tag) newBlog.tag = typeof tag === 'string' ? tag.split(',').map(t => t.trim()) : tag;
 
         let blog = await Blog.findById(req.params.id);
         if (!blog) return res.status(404).send("Not Found");
         if (blog.user.toString() !== req.user.id) return res.status(401).send("Not Allowed");
 
+        if (req.files.titleImage) {
+            const titleImageFile = req.files.titleImage[0];
+            const blob = bucket.file(Date.now() + path.extname(titleImageFile.originalname));
+            const blobStream = blob.createWriteStream({ resumable: false });
+
+            await new Promise((resolve, reject) => {
+                blobStream.on('error', (err) => reject(err));
+                blobStream.on('finish', () => {
+                    newBlog.titleImageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+                    resolve();
+                });
+                blobStream.end(titleImageFile.buffer);
+            });
+        }
+
+        const imageFiles = req.files.images || [];
+        let imageIndex = 0;
+        const processedContent = [];
+
+        for (const block of contentArray) {
+            if (block.type === 'image' && block.value.startsWith('blob:')) { // New image to upload
+                const file = imageFiles[imageIndex];
+                const blob = bucket.file(Date.now() + path.extname(file.originalname));
+                const blobStream = blob.createWriteStream({ resumable: false });
+
+                await new Promise((resolve, reject) => {
+                    blobStream.on('error', (err) => reject(err));
+                    blobStream.on('finish', () => {
+                        const imageUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+                        processedContent.push({ type: 'image', value: imageUrl });
+                        imageIndex++;
+                        resolve();
+                    });
+                    blobStream.end(file.buffer);
+                });
+            } else {
+                processedContent.push(block);
+            }
+        }
+
+        newBlog.content = processedContent;
+
         blog = await Blog.findByIdAndUpdate(req.params.id, { $set: newBlog }, { new: true });
+        res.json(blog);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+router.put('/togglestatus/:id', fetchuser, async (req, res) => {
+    try {
+        let blog = await Blog.findById(req.params.id);
+        if (!blog) return res.status(404).send("Not Found");
+        if (blog.user.toString() !== req.user.id) return res.status(401).send("Not Allowed");
+
+        const newStatus = blog.blogstatus === 'public' ? 'private' : 'public';
+        blog = await Blog.findByIdAndUpdate(req.params.id, { $set: { blogstatus: newStatus } }, { new: true });
         res.json(blog);
     } catch (error) {
         console.error(error.message);
@@ -152,8 +239,27 @@ router.delete('/deleteblog/:id', fetchuser, async (req, res) => {
         let blog = await Blog.findById(req.params.id);
         if (!blog) return res.status(404).send("Not Found");
         if (blog.user.toString() !== req.user.id) return res.status(401).send("Not Allowed");
-        
-        // Improvement Opportunity: Delete associated image from GCS bucket here
+
+        // Delete images from GCS
+        const imageUrls = [];
+        if (blog.titleImageUrl) {
+            imageUrls.push(blog.titleImageUrl);
+        }
+        blog.content.forEach(block => {
+            if (block.type === 'image') {
+                imageUrls.push(block.value);
+            }
+        });
+
+        for (const imageUrl of imageUrls) {
+            try {
+                const filename = imageUrl.split('/').pop();
+                await bucket.file(filename).delete();
+            } catch (error) {
+                console.error(`Failed to delete image ${imageUrl}:`, error);
+            }
+        }
+
         await Blog.findByIdAndDelete(req.params.id);
         res.json({ success: "Blog post has been deleted", blog });
     } catch (error) {

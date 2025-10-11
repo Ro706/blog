@@ -91,4 +91,29 @@ router.post(
   }
 );
 
+const fetchuser = require('../middleware/fetchalluser');
+
+// GET /api/auth/getuser
+router.get('/getuser', fetchuser, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// PUT /api/auth/updateuser
+router.put('/updateuser', fetchuser, async (req, res) => {
+  try {
+    const { name, phonenumber } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, { name, phonenumber }, { new: true }).select('-password');
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 module.exports = router;

@@ -5,7 +5,7 @@ const SignupPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phonenumber, setPhone] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -15,7 +15,7 @@ const SignupPage = () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name, email, password, phone }),
+      body: JSON.stringify({ name, email, password, phonenumber }),
     });
 
     const json = await response.json();
@@ -67,7 +67,7 @@ const SignupPage = () => {
               id="phone"
               type="text"
               placeholder="Phone Number"
-              value={phone}
+              value={phonenumber}
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>

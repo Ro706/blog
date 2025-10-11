@@ -57,6 +57,29 @@ const Dashboard = () => {
     }
   };
 
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/blog/togglestatus/${id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Re-fetch blogs to update the dashboard
+        fetchBlogs();
+      } else {
+        alert('Failed to toggle the blog status.');
+      }
+    } catch (error) {
+      console.error('Error toggling blog status:', error);
+      alert('An error occurred while toggling the blog status.');
+    }
+  };
+
   const chartData = blogs.map(blog => ({
     name: blog.title.substring(0, 15) + '...',
     views: blog.views,
@@ -126,6 +149,9 @@ const Dashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(blog.date).toLocaleDateString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-4">
+                        <button onClick={() => handleToggleStatus(blog._id, blog.blogstatus)} className="text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                          Toggle Status
+                        </button>
                         <Link to={`/edit-blog/${blog._id}`} className="text-indigo-600 hover:text-indigo-900 flex items-center gap-1">
                           <Edit size={16} /> Edit
                         </Link>
