@@ -10,11 +10,72 @@ const Dashboard = () => {
   const [totalViews, setTotalViews] = useState(0);
 
   const [recentComments, setRecentComments] = useState([]);
+  const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
 
   useEffect(() => {
     fetchBlogs();
     fetchRecentComments();
   }, []);
+
+  const handleQuickReply = async (e, parentCommentId, blogId) => {
+    e.preventDefault();
+    try {
+      // Post the new comment
+      await fetch(`http://localhost:5000/api/blog/${blogId}/comments`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ text: replyText, parentCommentId }),
+        }
+      );
+
+      // Mark the original comment as read
+      await fetch(`http://localhost:5000/api/blog/comments/${parentCommentId}/markasread`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+
+      // Reset reply state and fetch comments
+      setReplyText('');
+      setReplyingTo(null);
+      setRecentComments(recentComments.filter(comment => comment._id !== parentCommentId));
+    } catch (error) {
+      console.error('Error posting reply:', error);
+      alert('An error occurred while posting the reply.');
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/blog/comments/${commentId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          setRecentComments(recentComments.filter(comment => comment._id !== commentId));
+        } else {
+          alert('Failed to delete the comment.');
+        }
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+        alert('An error occurred while deleting the comment.');
+      }
+    }
+  };
 
   const fetchRecentComments = async () => {
     const response = await fetch('http://localhost:5000/api/blog/recentcomments', {
@@ -136,21 +197,68 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-700 p-6">Recent Comments</h2>
-          <div className="divide-y divide-gray-200">
-            {recentComments.map(comment => (
-              <div key={comment._id} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold text-gray-800">{comment.user.name}</div>
-                  <div className="text-xs text-gray-500">on <Link to={`/blog/${comment.blog._id}`} className="font-medium text-blue-600 hover:underline">{comment.blog.title}</Link></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white rounded-2xl shadow-md border border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-700 p-6">Manage Your Blogs</h2>
+            <div className="divide-y divide-gray-200">
+              {blogs.map(blog => (
+                <div key={blog._id} className="p-6">
+                  <div className="flex items-center justify-between">
+                    <Link to={`/blog/${blog._id}`} className="text-lg font-semibold text-blue-600 hover:underline">{blog.title}</Link>
+                    <div className="flex items-center space-x-4">
+                      <button onClick={() => handleToggleStatus(blog._id, blog.blogstatus)} className={`px-3 py-1 text-sm font-medium rounded-full ${blog.blogstatus === 'public' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {blog.blogstatus}
+                      </button>
+                      <Link to={`/edit-blog/${blog._id}`} className="text-gray-500 hover:text-blue-600">
+                        <Edit size={20} />
+                      </Link>
+                      <button onClick={() => handleDelete(blog._id)} className="text-gray-500 hover:text-red-600">
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500 mt-2">
+                    Comments: {blog.commentsCount || 0}
+                  </div>
                 </div>
-                <p className="text-gray-600 mt-2">{comment.text}</p>
-                <div className="mt-4 flex justify-end">
-                  <button className="text-sm font-medium text-blue-600 hover:underline">Quick Reply</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-md border border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-700 p-6">Recent Comments</h2>
+            <div className="divide-y divide-gray-200">
+              {recentComments.map(comment => (
+                <div key={comment._id} className={`p-6 ${!comment.isRead ? 'bg-green-50' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="font-semibold text-gray-800 flex items-center">
+                      {!comment.isRead && <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>}
+                      {comment.user.name}
+                    </div>
+                    <div className="text-xs text-gray-500">on <Link to={`/blog/${comment.blog._id}`} className="font-medium text-blue-600 hover:underline">{comment.blog.title}</Link></div>
+                  </div>
+                  <p className="text-gray-600 mt-2">{comment.text}</p>
+                  <div className="mt-4">
+                    <form onSubmit={(e) => handleQuickReply(e, comment._id, comment.blog._id)}>
+                      <div className="flex items-center">
+                        <input
+                          type="text"
+                          placeholder="Write a reply..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={replyingTo === comment._id ? replyText : ''}
+                          onChange={(e) => {
+                            setReplyingTo(comment._id);
+                            setReplyText(e.target.value);
+                          }}
+                        />
+                        <button type="submit" className="ml-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700">Reply</button>
+                        <button onClick={() => handleDeleteComment(comment._id)} className="ml-2 px-4 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700">Delete</button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

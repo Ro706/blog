@@ -20,6 +20,14 @@ const CommentSchema = new Schema({
         type: Date,
         default: Date.now
     },
+    isRead: {
+        type: Boolean,
+        default: false
+    },
+    parentComment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'comment'
+    }
 });
 
 module.exports = mongoose.model('comment', CommentSchema);
