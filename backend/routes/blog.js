@@ -49,7 +49,7 @@ router.get('/recentcomments', fetchuser, async (req, res) => {
         const blogs = await Blog.find({ user: req.user.id });
         const blogIds = blogs.map(blog => blog._id);
 
-        const comments = await Comment.find({ blog: { $in: blogIds } })
+        const comments = await Comment.find({ blog: { $in: blogIds }, seen: false })
             .populate('user', 'name')
             .populate('blog', 'title')
             .sort({ createdAt: -1 });
@@ -452,7 +452,24 @@ router.delete('/comments/:commentId', fetchuser, async (req, res) => {
     }
 });
 
-router.put('/comments/:commentId/markasread', fetchuser, async (req, res) => {
+
+
+router.get('/comments/:commentId', fetchuser, async (req, res) => {
+    try {
+        const comment = await Comment.findById(req.params.commentId)
+            .populate('user', 'name')
+            .populate('blog', 'title');
+        if (!comment) {
+            return res.status(404).send("Not Found");
+        }
+        res.json(comment);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+router.put('/comments/:commentId/seen', fetchuser, async (req, res) => {
     try {
         const comment = await Comment.findById(req.params.commentId);
         if (!comment) {
@@ -465,9 +482,9 @@ router.put('/comments/:commentId/markasread', fetchuser, async (req, res) => {
             return res.status(401).send("Not Allowed");
         }
 
-        comment.isRead = true;
+        comment.seen = true;
         await comment.save();
-        res.json({ success: "Comment marked as read" });
+        res.json({ success: "Comment marked as seen" });
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Internal Server Error");

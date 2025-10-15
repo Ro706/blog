@@ -10,9 +10,10 @@ const User = require('../models/User');
 router.post(
   '/signup',
   [
-    body('name').isString().withMessage('Name must be a string'),
+    body('name').isString().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Invalid email address'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+    body('phonenumber').isString().notEmpty().withMessage('Phone number is required'),
   ],
   async (req, res) => {
     // Check for validation errors
@@ -24,7 +25,7 @@ router.post(
     try {
       const existingUser = await User.findOne({ email: req.body.email });
       if (existingUser){
-        return res.status(400).json({ error: 'User already exists' });
+        return res.status(400).json({ errors: [{ msg: 'User with this email already exists' }] });
       }
       // Hashing the password
       const salt = await bcrypt.genSalt(10);
@@ -68,13 +69,13 @@ router.post(
       // Check if user exists
       const user = await User.findOne({ email });
       if (!user) {
-        return res.status(400).json({ error: 'Invalid credentials' });
+        return res.status(400).json({ errors: [{ msg: 'Invalid credentials' }] });
       }
 
       // Check password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ error: 'Invalid credentials' });
+        return res.status(400).json({ errors: [{ msg: 'Invalid credentials' }] });
       }
 
       // Create token

@@ -27,6 +27,10 @@ const CommentSchema = new Schema({
     parentComment: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'comment'
+    },
+    seen: {
+        type: Boolean,
+        default: false
     }
 });
 

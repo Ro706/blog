@@ -6,6 +6,7 @@ const SignupPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phonenumber, setPhone] = useState('');
+  const [errors, setErrors] = useState([]);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -23,7 +24,7 @@ const SignupPage = () => {
       localStorage.setItem('token', json.authToken);
       navigate('/');
     } else {
-      alert('Invalid credentials');
+      setErrors(json.errors);
     }
   };
 
@@ -83,6 +84,9 @@ const SignupPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            {errors && errors.map((error, i) => (
+              <p key={i} className="text-red-500 text-xs italic">{error.msg}</p>
+            ))}
           </div>
           <div className="flex items-center justify-between">
             <button

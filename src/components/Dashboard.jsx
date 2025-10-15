@@ -13,16 +13,22 @@ const Dashboard = () => {
   const [replyText, setReplyText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
 
+  const [newCommentId, setNewCommentId] = useState(null);
+
   useEffect(() => {
     fetchBlogs();
-    fetchRecentComments();
-  }, []);
+    if (newCommentId) {
+      fetchRecentComments(newCommentId);
+    } else {
+      fetchRecentComments();
+    }
+  }, [newCommentId]);
 
   const handleQuickReply = async (e, parentCommentId, blogId) => {
     e.preventDefault();
     try {
       // Post the new comment
-      await fetch(`http://localhost:5000/api/blog/${blogId}/comments`,
+      const response = await fetch(`http://localhost:5000/api/blog/${blogId}/comments`,
         {
           method: 'POST',
           headers: {
@@ -33,8 +39,10 @@ const Dashboard = () => {
         }
       );
 
-      // Mark the original comment as read
-      await fetch(`http://localhost:5000/api/blog/comments/${parentCommentId}/markasread`,
+      const newComment = await response.json();
+      setNewCommentId(newComment._id);
+
+      await fetch(`http://localhost:5000/api/blog/comments/${parentCommentId}/seen`,
         {
           method: 'PUT',
           headers: {
@@ -43,10 +51,8 @@ const Dashboard = () => {
         }
       );
 
-      // Reset reply state and fetch comments
       setReplyText('');
       setReplyingTo(null);
-      setRecentComments(recentComments.filter(comment => comment._id !== parentCommentId));
     } catch (error) {
       console.error('Error posting reply:', error);
       alert('An error occurred while posting the reply.');
@@ -77,8 +83,12 @@ const Dashboard = () => {
     }
   };
 
-  const fetchRecentComments = async () => {
-    const response = await fetch('http://localhost:5000/api/blog/recentcomments', {
+  const fetchRecentComments = async (commentId) => {
+    let url = 'http://localhost:5000/api/blog/recentcomments';
+    if (commentId) {
+      url = `http://localhost:5000/api/blog/comments/${commentId}`;
+    }
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -86,7 +96,11 @@ const Dashboard = () => {
       },
     });
     const json = await response.json();
-    setRecentComments(json);
+    if (commentId) {
+      setRecentComments([json]);
+    } else {
+      setRecentComments(json);
+    }
   };
 
   const fetchBlogs = async () => {
@@ -229,10 +243,9 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold text-gray-700 p-6">Recent Comments</h2>
             <div className="divide-y divide-gray-200">
               {recentComments.map(comment => (
-                <div key={comment._id} className={`p-6 ${!comment.isRead ? 'bg-green-50' : ''}`}>
+                <div key={comment._id} className={`p-6`}>
                   <div className="flex items-center justify-between">
                     <div className="font-semibold text-gray-800 flex items-center">
-                      {!comment.isRead && <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>}
                       {comment.user.name}
                     </div>
                     <div className="text-xs text-gray-500">on <Link to={`/blog/${comment.blog._id}`} className="font-medium text-blue-600 hover:underline">{comment.blog.title}</Link></div>

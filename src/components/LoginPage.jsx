@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState([]);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -21,7 +22,7 @@ const LoginPage = () => {
       localStorage.setItem('token', json.authToken);
       navigate('/');
     } else {
-      alert('Invalid credentials');
+      setErrors(json.errors);
     }
   };
 
@@ -55,6 +56,9 @@ const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            {errors && errors.map((error, i) => (
+              <p key={i} className="text-red-500 text-xs italic">{error.msg}</p>
+            ))}
           </div>
           <div className="flex items-center justify-between">
             <button
